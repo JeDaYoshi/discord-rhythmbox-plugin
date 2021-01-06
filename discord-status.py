@@ -1,13 +1,13 @@
 import gi
 import time
 import os
-gi.require_version('Notify', '0.7')
-gi.require_version('Gtk', '3.0')
+gi.require_version("Notify", "0.7")
+gi.require_version("Gtk", "3.0")
 from gi.repository import Notify, Gtk
 from gi.repository import Gio, GLib, GObject, Peas
 from gi.repository import RB
 from pypresence import Presence
-from status_prefs import discord_status_prefs 
+from status_prefs import discord_status_prefs
 
 class discord_status_dev(GObject.Object, Peas.Activatable):
   GObject.type_register(discord_status_prefs)
@@ -24,20 +24,20 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
   RPC = Presence("589905203533185064")
   connected = False
   gave_up = False
-  
+
   try:
     RPC.connect()
-    try:
-      if show_notifs:
-        Notify.Notification.new("Rhythmbox Discord Status Plugin", "Connected to Discord").show()
-        Notify.uninit()
-    except:
-      print("Failed to init Notify. Is the notificaion service running?")
+    #try:
+    #  if show_notifs:
+    #    Notify.Notification.new("Rhythmbox Discord Status Plugin", "Connected to Discord").show()
+    #    Notify.uninit()
+    #except:
+    #  print("Failed to init Notify. Is the notificaion service running?")
     connected = True
   except ConnectionRefusedError:
     try:
       if show_notifs:
-        Notify.Notification.new("Rhythmbox Discord Status Plugin", "Failed to connect to discord: ConnectionRefused. Is discord open?").show()
+        Notify.Notification.new("Rhythmbox Discord Status Plugin", "Failed to connect to Discord: ConnectionRefused. Is the client open?").show()
         Notify.uninit()
     except:
       print("Failed to init Notify. Is the notificaion service running?")
@@ -52,7 +52,7 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
 
         hbox = Gtk.HBox()
 
-        label = Gtk.Label("\nFailed to connect to the discord client. Make sure that discord is open. Retry?\n")
+        label = Gtk.Label("\nFailed to connect to the Discord client. Make sure that it is open. Retry?\n")
         hbox.pack_start(label, True, True, 0)
 
         dialog.vbox.pack_start(hbox, True, True, 0)
@@ -60,14 +60,14 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
 
         response = dialog.run()
 
-        if (response == Gtk.ResponseType.OK):
+        if response == Gtk.ResponseType.OK:
           try:
             RPC.connect()
             connected = True
           except ConnectionRefusedError:
-            print('Failed to retry connection to discord')
+            print("Failed to retry connection to Discord")
 
-        elif (response == Gtk.ResponseType.CANCEL):
+        elif response == Gtk.ResponseType.CANCEL:
           gave_up = True
           dialog.destroy()
 
@@ -75,35 +75,34 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
           pass
 
           dialog.destroy()
-  __gtype_name__ = 'DiscordStatusPlugin'
+
+  __gtype_name__ = "DiscordStatusPlugin"
   object = GObject.property(type=GObject.Object)
   start_date = None
   playing_date = None
   is_playing = False
-  def __init__ (self):
-    GObject.Object.__init__ (self)
+  def __init__(self):
+    GObject.Object.__init__(self)
 
   def do_activate(self):
     shell = self.object
     sp = shell.props.shell_player
-    self.psc_id  = sp.connect ('playing-song-changed',
-                               self.playing_entry_changed)
-    self.pc_id   = sp.connect ('playing-changed',
-                               self.playing_changed)
-    self.ec_id   = sp.connect ('elapsed-changed',
-                               self.elapsed_changed)
-    self.pspc_id = sp.connect ('playing-song-property-changed',
-                               self.playing_song_property_changed)
-
-    self.RPC.update(state="Playback Stopped", details="Rhythmbox Status Plugin", large_image="rhythmbox", small_image="stop", small_text="Stopped")
+    self.psc_id  = sp.connect("playing-song-changed",
+                              self.playing_entry_changed)
+    self.pc_id   = sp.connect("playing-changed",
+                              self.playing_changed)
+    self.ec_id   = sp.connect("elapsed-changed",
+                              self.elapsed_changed)
+    self.pspc_id = sp.connect("playing-song-property-changed",
+                              self.playing_song_property_changed)
 
   def do_deactivate(self):
     shell = self.object
     sp = shell.props.shell_player
-    sp.disconnect (self.psc_id)
-    sp.disconnect (self.pc_id)
-    sp.disconnect (self.ec_id)
-    sp.disconnect (self.pspc_id)
+    sp.disconnect(self.psc_id)
+    sp.disconnect(self.pc_id)
+    sp.disconnect(self.ec_id)
+    sp.disconnect(self.pspc_id)
     self.RPC.clear(pid=os.getpid())
     self.RPC.close()
 
@@ -114,17 +113,19 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
       duration = None
 
       if not sp.get_playing_entry().get_string(RB.RhythmDBPropType.ALBUM):
-        album = 'Unknown'
+        album = ""
       else:
-        album = sp.get_playing_entry().get_string(RB.RhythmDBPropType.ALBUM)
+        album = " - %s" %(sp.get_playing_entry().get_string(RB.RhythmDBPropType.ALBUM))
+      if album == " - Unknown":
+        album = ""
 
       if not sp.get_playing_entry().get_string(RB.RhythmDBPropType.TITLE):
-        title = 'Unknown'
+        title = "Unknown"
       else:
         title = sp.get_playing_entry().get_string(RB.RhythmDBPropType.TITLE)
 
       if not sp.get_playing_entry().get_string(RB.RhythmDBPropType.ARTIST):
-        artist = 'Unknown'
+        artist = "Unknown"
       else:
         artist = sp.get_playing_entry().get_string(RB.RhythmDBPropType.ARTIST)
 
@@ -133,21 +134,30 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
       else:
         duration = sp.get_playing_entry().get_ulong(RB.RhythmDBPropType.DURATION)
 
-      if len(album) < 2:
-        album = "%s​" %(album)
-        
       return [album, title, artist, duration]
 
   def playing_song_property_changed(self, sp, uri, property, old, newvalue):
       print("playing_song_property_changed: %s %s %s %s" %(uri, property, old, newvalue))
-      
+
       info = self.get_info(sp)
+      album = info[0]
+      title = info[1]
+      artist = info[2]
+
+      details = "%s%s" %(artist, album)
+      if details == "Unknown":
+        details = title
+
       if property == "rb:stream-song-title":
         self.is_streaming = True
-        self.update_streaming_rpc(info, newvalue)
+        self.update_streaming_rpc(details, newvalue)
 
   def update_streaming_rpc(self, info, d):
-    self.RPC.update(state=info[1][0:127], details=d[0:127], large_image="rhythmbox", small_image="play", small_text="Streaming", start=int(time.time()))
+    if info == "Unknown":
+      self.RPC.update(state=d[0:127], large_image="rhythmbox", small_image="play", small_text="Streaming", start=int(time.time()))
+      return
+
+    self.RPC.update(state=info[0:127], details=d[0:127], large_image="rhythmbox", small_image="play", small_text="Streaming", start=int(time.time()))
 
   def playing_entry_changed(self, sp, entry):
     if sp.get_playing_entry():
@@ -159,22 +169,22 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
       artist = info[2]
       duration = info[3]
 
-      if duration == 0 and not self.is_streaming:
-        self.update_streaming_rpc(info, "Unknown - Unknown")
-      elif duration == 0 and self.is_streaming:
-        self.update_streaming_rpc(info, "Unknown - Unknown")
+      details="%s%s" %(artist, album)
+
+      if duration == 0:
+        self.update_streaming_rpc(details, title)
+      if duration == 0 and self.is_streaming:
         return
       else:
         self.is_streaming = False
 
-      details="%s - %s" %(title, artist)
       self.is_playing = True
 
       start_time = int(time.time())
       pos = sp.get_playing_time().time
       end_time = start_time + duration - pos
 
-      self.RPC.update(state=album[0:127], details=details[0:127], large_image="rhythmbox", small_image="play", small_text="Playing", start=start_time, end=end_time)
+      self.RPC.update(state=details[0:127], details=title[0:127], large_image="rhythmbox", small_image="play", small_text="Playing", start=start_time, end=end_time)
 
   def playing_changed(self, sp, playing):
     album = None
@@ -187,14 +197,14 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
       artist = info[2]
       duration = info[3]
 
+      details="%s%s" %(artist, album)
+
       if duration == 0 and not self.is_streaming:
-        self.update_streaming_rpc(info, "Unknown - Unknown")
-      elif duration == 0:
+        self.update_streaming_rpc(details, title)
+      if duration == 0:
         return
       else:
         self.is_streaming = False
-
-      details="%s - %s" %(title, artist)
 
       start_time = int(time.time())
       pos = sp.get_playing_time().time
@@ -202,13 +212,11 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
 
     if playing:
       self.is_playing = True
-      self.RPC.update(state=album[0:127], details=details[0:127], large_image="rhythmbox", small_image="play", small_text="Playing", start=start_time, end=end_time)
-    elif not playing and not sp.get_playing_entry():
-      self.is_playing = False
-      self.RPC.update(state="Playback Stopped", details="Rhythmbox Status Plugin", large_image="rhythmbox", small_image="stop", small_text="Stopped")
-    else:
-      self.is_playing = False
-      self.RPC.update(state=album[0:127], details=details[0:127], large_image="rhythmbox", small_image="pause", small_text="Paused")
+      self.RPC.update(state=details[0:127], details=title[0:127], large_image="rhythmbox", small_image="play", small_text="Playing", start=start_time, end=end_time)
+      return
+
+    self.is_playing = False
+    self.RPC.clear()
 
   def elapsed_changed(self, sp, elapsed):
     if not self.playing_date or not self.is_playing:
@@ -226,17 +234,17 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
         artist = info[2]
         duration = info[3]
 
+        details="%s%s" %(artist, album)
+
         if duration == 0 and not self.is_streaming:
-          self.update_streaming_rpc(info, "Unknown - Unknown")
-        elif duration == 0:
+          self.update_streaming_rpc(details, title)
+        if duration == 0:
           return
         else:
           self.is_streaming = False
-
-        details="%s - %s" %(title, artist)
 
         start_time = int(time.time())
         pos = sp.get_playing_time().time
         end_time = start_time + duration - pos
 
-        self.RPC.update(state=album[0:127], details=details[0:127], large_image="rhythmbox", small_image="play", small_text="Playing", start=start_time, end=end_time)
+        self.RPC.update(state=details[0:127], details=title[0:127], large_image="rhythmbox", small_image="play", small_text="Playing", start=start_time, end=end_time)
