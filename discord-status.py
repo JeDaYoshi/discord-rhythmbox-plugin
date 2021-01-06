@@ -216,7 +216,7 @@ class discord_status_dev(GObject.Object, Peas.Activatable):
       return
 
     self.is_playing = False
-    self.RPC.clear()
+    self.RPC.clear(pid=os.getpid())
 
   def elapsed_changed(self, sp, elapsed):
     if not self.playing_date or not self.is_playing:
